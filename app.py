@@ -4,7 +4,7 @@ from pymongo import MongoClient
 import bcrypt
 import os
 from dotenv import load_dotenv
-import certifi
+
 
 app = Flask(__name__)
 CORS(app)
@@ -12,13 +12,16 @@ CORS(app)
 load_dotenv()
 
 try:
-    mongo_uri = os.getenv("MONGO_URI")
-    client = MongoClient(mongo_uri, tls=True, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=10000)
-    db = client["sample_mflix"]
+    
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://mongo:27017/eventplanner")
+
+    client = MongoClient(mongo_uri, serverSelectionTimeoutMS=10000)
+
+    db = client["eventplanner"]
     users_collection = db["users"]
     events_collection = db["events"]
 
-    client.admin.command('ping')
+    client.admin.command("ping")
     print("✅ MongoDB connected successfully!")
 except Exception as e:
     print("❌ MongoDB connection failed:", e)
@@ -281,16 +284,17 @@ def delete_event(event_id):
     if not event:
         return jsonify({"message": "Event not found"}), 404
 
-    
+    # Check if the requester is the organizer
     if event["organizer_email"] != email:
         return jsonify({"message": "You are not the organizer of this event"}), 403
 
-   
+    # Delete event
     events_collection.delete_one({"_id": event_obj_id})
 
     return jsonify({"message": "Event deleted successfully"}), 200
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 
